@@ -18,11 +18,12 @@ $print = (isset($_GET["print"])&&$_GET["print"]=='true'?true:false);
 $sizefactor = (isset($_GET["sizefactor"])?$_GET["sizefactor"]:"1");
 
 // This function call can be copied into your project and can be made from anywhere in your code
-barcode( $filepath, $text, $size, $orientation, $code_type, $print, $sizefactor );
+//barcode( $filepath, $text, $size, $orientation, $code_type, $print, $sizefactor );
 
 function barcode( $filepath="", $text="0", $size="20", $orientation="horizontal", $code_type="code128", $print=false, $SizeFactor=1 ) {
 	$code_string = "";
 	// Translate the $text into barcode the correct $code_type
+	
 	if ( in_array(strtolower($code_type), array("code128", "code128b")) ) {
 		$chksum = 104;
 		// Must not change order of array elements as the checksum depends on the array's key to validate final code
@@ -103,14 +104,21 @@ function barcode( $filepath="", $text="0", $size="20", $orientation="horizontal"
 	// Pad the edges of the barcode
 	$code_length = 20;
 	if ($print) {
-		$text_height = 30;
+		if ( strtolower($orientation) == "horizontal" ) {
+			$text_width = 0;
+			$text_height = 20;
+		}else{
+			$text_width = 20;
+			$text_height = 0;
+		}
 	} else {
+		$text_width = 0;
 		$text_height = 0;
 	}
 	
 	for ( $i=1; $i <= strlen($code_string); $i++ ){
-		$code_length = $code_length + (integer)(substr($code_string,($i-1),1));
-        }
+		$code_length += (integer)(substr($code_string,($i-1),1));
+  }
 
 	if ( strtolower($orientation) == "horizontal" ) {
 		$img_width = $code_length*$SizeFactor;
@@ -120,34 +128,38 @@ function barcode( $filepath="", $text="0", $size="20", $orientation="horizontal"
 		$img_height = $code_length*$SizeFactor;
 	}
 
-	$image = imagecreate($img_width, $img_height + $text_height);
+	$image = imagecreate($img_width + $text_width, $img_height + $text_height);
 	$black = imagecolorallocate ($image, 0, 0, 0);
 	$white = imagecolorallocate ($image, 255, 255, 255);
 
 	imagefill( $image, 0, 0, $white );
 	if ( $print ) {
-		imagestring($image, 5, 31, $img_height, $text, $black );
+		if ( strtolower($orientation) == "horizontal" ) {
+			imagestring($image, 5, 31, $img_height, $text, $black );
+		}else if ( strtolower($orientation) == "vertical" ) {
+			imagestringup ( $image, 2, $img_width, $img_height-40, $text, $black );
+		}
 	}
-
+	
 	$location = 10;
 	for ( $position = 1 ; $position <= strlen($code_string); $position++ ) {
 		$cur_size = $location + ( substr($code_string, ($position-1), 1) );
 		if ( strtolower($orientation) == "horizontal" )
 			imagefilledrectangle( $image, $location*$SizeFactor, 0, $cur_size*$SizeFactor, $img_height, ($position % 2 == 0 ? $white : $black) );
 		else
-			imagefilledrectangle( $image, 0, $location*$SizeFactor, $img_width, $cur_size*$SizeFactor, ($position % 2 == 0 ? $white : $black) );
+			imagefilledrectangle( $image, 0, $location*$SizeFactor, $img_width, $cur_size*$SizeFactor,  ($position % 2 == 0 ? $white : $black) );
 		$location = $cur_size;
 	}
 	
 	// Draw barcode to the screen or save in a file
-	if ( $filepath=="" ) {
+	if ( $filepath=="" || $filepath==null ) {
 		header ('Content-type: image/png');
 		imagepng($image);
-		imagedestroy($image);
-	} else {
+	}else{
 		imagepng($image,$filepath);
-		imagedestroy($image);		
 	}
+	imagedestroy($image);
+	
 }
 
 ?>
